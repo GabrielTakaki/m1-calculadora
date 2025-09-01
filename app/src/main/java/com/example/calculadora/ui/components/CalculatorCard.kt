@@ -26,14 +26,86 @@ import java.text.DecimalFormat
 @Composable
 fun CalculatorCard() {
     var displayValue by remember { mutableStateOf("0") }
+    var firstOperand by remember { mutableStateOf<Double?>(null) }
+    var operation by remember { mutableStateOf<String?>(null) }
+    var shouldClearDisplayNext by remember { mutableStateOf(false) }
 
     fun onNumberClick(number: String) {
+        if (shouldClearDisplayNext) {
+            displayValue = number
+            shouldClearDisplayNext = false
+        } else {
+            if (displayValue == "0" && number != ".") {
+                displayValue = number
+            } else if (displayValue.length < 9) {
+                displayValue += number
+            }
+        }
+    }
+
+    fun onDecimalClick() {
+        if (shouldClearDisplayNext) {
+            displayValue = "0."
+            shouldClearDisplayNext = false
+        } else if (!displayValue.contains(".") && displayValue.length < 9) {
+            displayValue += "."
+        }
+    }
+
+    fun performCalculation() {
+        val secondOperandString = displayValue
+        if (firstOperand != null && operation != null) {
+            val secondOperand = secondOperandString.toDoubleOrNull()
+            if (secondOperand != null) {
+                var result = 0.0
+                result = when (operation) {
+                    "+" -> firstOperand!! + secondOperand
+                    "-" -> firstOperand!! - secondOperand
+                    "*" -> firstOperand!! * secondOperand
+                    "/" -> {
+                        if (secondOperand == 0.0) {
+                            firstOperand = null
+                            operation = null
+                            shouldClearDisplayNext = true
+                            return
+                        }
+                        firstOperand!! / secondOperand
+                    }
+                    else -> secondOperand // Should not happen
+                }
+                displayValue = result.toString()
+                firstOperand = result
+                operation = null
+
+            }
+        }
+        shouldClearDisplayNext = true
+    }
+
+    fun onOperationClick(op: String) {
+        val currentDisplayNumber = displayValue.toDoubleOrNull()
+
+        if (firstOperand != null && operation != null && !shouldClearDisplayNext && currentDisplayNumber != null) {
+            performCalculation()
+        }
+        
+        firstOperand = displayValue.toDoubleOrNull()
+        operation = op
+        shouldClearDisplayNext = true
     }
 
     fun onEqualsClick() {
+        if (firstOperand != null && operation != null) {
+            performCalculation()
+            operation = null
+        } 
     }
 
     fun onClearClick() {
+        displayValue = "0"
+        firstOperand = null
+        operation = null
+        shouldClearDisplayNext = false
     }
 
     Column(
@@ -70,7 +142,7 @@ fun CalculatorCard() {
             CalculatorButton(symbol = "C", modifier = buttonModifier, onClick = ::onClearClick)
             CalculatorButton(symbol = " ", modifier = buttonModifier) { /* Botão "Placeholder" para compor UI */ }
             CalculatorButton(symbol = " ", modifier = buttonModifier) { /* Botão "Placeholder" para compor UI */ }
-            CalculatorButton(symbol = "/", modifier = buttonModifier) {  }
+            CalculatorButton(symbol = "/", modifier = buttonModifier) { onOperationClick("/") }
         }
         Spacer(modifier = Modifier.height(rowSpacing))
         Row(
@@ -80,7 +152,7 @@ fun CalculatorCard() {
             listOf("7", "8", "9").forEach { number ->
                 CalculatorButton(symbol = number, modifier = buttonModifier) { onNumberClick(number) }
             }
-            CalculatorButton(symbol = "*", modifier = buttonModifier) {}
+            CalculatorButton(symbol = "*", modifier = buttonModifier) { onOperationClick("*") }
         }
         Spacer(modifier = Modifier.height(rowSpacing))
         Row(
@@ -90,7 +162,7 @@ fun CalculatorCard() {
             listOf("4", "5", "6").forEach { number ->
                 CalculatorButton(symbol = number, modifier = buttonModifier) { onNumberClick(number) }
             }
-            CalculatorButton(symbol = "-", modifier = buttonModifier) {}
+            CalculatorButton(symbol = "-", modifier = buttonModifier) { onOperationClick("-") }
         }
         Spacer(modifier = Modifier.height(rowSpacing))
         Row(
@@ -100,7 +172,7 @@ fun CalculatorCard() {
             listOf("1", "2", "3").forEach { number ->
                 CalculatorButton(symbol = number, modifier = buttonModifier) { onNumberClick(number) }
             }
-            CalculatorButton(symbol = "+", modifier = buttonModifier) {}
+            CalculatorButton(symbol = "+", modifier = buttonModifier) { onOperationClick("+") }
         }
         Spacer(modifier = Modifier.height(rowSpacing))
         Row(
@@ -108,7 +180,7 @@ fun CalculatorCard() {
             horizontalArrangement = Arrangement.spacedBy(rowSpacing)
         ) {
             CalculatorButton(symbol = "0", modifier = buttonModifier.weight(2f)) { onNumberClick("0") }
-            CalculatorButton(symbol = ".", modifier = buttonModifier)
+            CalculatorButton(symbol = ".", modifier = buttonModifier, onClick = ::onDecimalClick)
             CalculatorButton(symbol = "=", modifier = buttonModifier, onClick = ::onEqualsClick)
         }
     }
